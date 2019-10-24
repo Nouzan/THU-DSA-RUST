@@ -1,5 +1,6 @@
 use std::cmp::min;
 use std::mem::swap;
+use std::fmt;
 use crate::{Vector, Rank};
 
 #[derive(Debug)]
@@ -7,7 +8,21 @@ pub struct VecVector<T: Ord> {
     elems: Vec<T>
 }
 
-impl<T: Ord> VecVector<T> {
+impl<T: Ord+fmt::Display> fmt::Display for VecVector<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut res = write!(f, "[");
+        for (i, e) in self.elems.iter().enumerate() {
+            res = write!(f, "{}", e);
+            if i < self.size() - 1 {
+                res = write!(f, ",");
+            }
+        }
+        res = write!(f, "]");
+        res
+    }
+}
+
+impl<T: Ord+fmt::Display> VecVector<T> {
     pub fn new() -> Self {
         VecVector {
             elems: Vec::new()
@@ -24,9 +39,47 @@ impl<T: Ord> VecVector<T> {
         }
         sorted
     }
+
+    fn search_b(&self, e: &T, mut lo: Rank, mut hi: Rank) -> Option<Rank> {
+        while 1 < hi - lo {
+            let mid = (lo + hi) >> 1;
+            if *e < self.elems[mid] {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
+        }
+        // [lo, lo) or [lo, lo + 1)
+        // 1) [lo, lo): [lo, lo + 1) -> [lo, lo) 是不可能的；因此必然是 [lo, lo) -> [lo, lo)
+        // 2) [lo, lo + 1): [lo, hi) -> [lo, lo + 1) 即：hi -> mid，意味着 *e < *(lo + 1)，则 *e <= *lo
+        //                  [lo, hi) -> [hi - 1, hi) 即：lo -> mid，意味着 *lo <= *e <= *(lo + 1)
+        if *e == self.elems[lo] {
+            Some(lo)
+        } else {
+            None
+        }
+    }
+
+    fn search_c(&self, e: &T, mut lo: Rank, mut hi: Rank) -> Option<Rank> {
+        while lo < hi {
+            let mid = (lo + hi) >> 1;
+            if *e < self.elems[mid] {
+                hi = mid;
+            } else {
+                lo = mid + 1;
+            }
+        }
+        // [lo, lo + 1) -> [lo, lo): *e < *lo
+        // [hi - 1, hi) -> [hi, hi): *(hi - 1) <= *e < *hi
+        if lo == 0 {
+            None
+        } else {
+            Some(lo - 1)
+        }
+    }
 }
 
-impl<T: Ord> Vector<T> for VecVector<T> {
+impl<T: Ord+fmt::Display> Vector<T> for VecVector<T> {
     fn size(&self) -> usize {
         self.elems.len()
     }
@@ -56,20 +109,12 @@ impl<T: Ord> Vector<T> for VecVector<T> {
         None
     }
 
-    fn search(&self, e: &T, mut lo: Rank, mut hi: Rank) -> Option<Rank> {
-        if hi <= self.size() {
-            while lo < hi {
-                let mid = (lo + hi) >> 1;
-                if *e < self.elems[mid] {
-                    hi = mid;
-                } else if self.elems[mid] < *e {
-                    lo = mid + 1;
-                } else {
-                    return Some(mid);
-                }
-            }
+    fn search(&self, e: &T, lo: Rank, hi: Rank) -> Option<Rank> {
+        if lo < hi && hi <= self.size() && self.elems[lo] <= *e {
+            self.search_c(e, lo, hi)
+        } else {
+            None
         }
-        None
     }
 
     fn get(&self, r: Rank) -> Option<&T> {
