@@ -15,6 +15,16 @@ fn main() {
     a.insert_as_suss(3);
     a.insert_as_pred(4);
     a.suss().unwrap().insert_as_pred(5);
+    let b = a.suss().unwrap();
+    a.suss().unwrap().remove_ownership();
+    a.clear_after();
+    // a.remove_ownership();
 
     println!("{:?}", a);
+    println!("{:?}", b);
+
+    a.insert_ownership(&b);
+
+    println!("{:?}", a);
+    println!("{:?}", b);
 }

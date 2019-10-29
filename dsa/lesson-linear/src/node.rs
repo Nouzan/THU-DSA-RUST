@@ -2,7 +2,6 @@ use std::cell::{RefCell, Ref, RefMut};
 use std::rc::Rc;
 use std::borrow::{Borrow, BorrowMut};
 
-#[derive(Debug)]
 pub struct Node<T> (Rc<RefCell<T>>);
 
 impl<T> Node<T> {
@@ -30,5 +29,13 @@ impl<T> Node<T> {
 impl<T> Clone for Node<T> {
     fn clone(&self) -> Self {
         Node(Rc::clone(&self.0))
+    }
+}
+
+use std::fmt;
+
+impl<T: fmt::Debug> fmt::Debug for Node<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Node({:?})", self.borrow())
     }
 }
