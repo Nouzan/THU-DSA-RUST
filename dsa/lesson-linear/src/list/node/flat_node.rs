@@ -1,20 +1,25 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::rc::Weak;
+use std::collections::HashMap;
+
+use crate::node::Node;
 
 #[derive(Debug)]
 pub struct RawNode<T> {
-    data: T,
+    data: Option<Node<T>>,
     pred: Weak<RefCell<RawNode<T>>>,
     suss: Weak<RefCell<RawNode<T>>>,
+    next: Option<Rc<RefCell<RawNode<T>>>>
 }
 
 impl<T> RawNode<T> {
     pub fn new(data: T) -> Self {
         RawNode {
-            data: data,
+            data: Some(Node::new(data)),
             pred: Weak::new(),
-            suss: Weak::new()
+            suss: Weak::new(),
+            next: None,
         }
     }
 
@@ -34,19 +39,10 @@ impl<T> RawNode<T> {
         }
     }
 
-    fn data(&self) -> &T {
-        &self.data
+    fn get(&self) -> Option<&Node<T>> {
+        self.data.as_ref()
     }
 }
-
-// #[derive(Debug)]
-// pub struct SharedNode<T> (RefCell<RawNode<T>>);
-
-// impl<T> From<RawNode<T>> for SharedNode<T> {
-//     fn from(node: RawNode<T>) -> Self {
-//         SharedNode(RefCell::new(node))
-//     }
-// }
 
 #[derive(Debug)]
 pub struct ListNode<T> (Rc<RefCell<RawNode<T>>>);
@@ -57,20 +53,51 @@ impl<T> From<RawNode<T>> for ListNode<T> {
     }
 }
 
-impl<T> ListNode<T> {
+impl<T: std::fmt::Debug> ListNode<T> {
     pub fn new(data: T) -> Self {
-        ListNode::from(RawNode::new(data))
+        Self::from(RawNode::new(data))
     }
 
-    pub fn set(&self, data: T) -> &Self {
-        self.0.borrow_mut().data = data;
-        self
+    pub fn insert_as_pred(&self, data: T) -> Self {
+        let pred = Self::new(data);
+
+        // 维护ownership链
+        if let Some(next) = self.0.borrow_mut().next.clone() {
+            pred.0.borrow_mut().next = Some(next);
+        }
+        self.0.borrow_mut().next = Some(pred.0.clone());
+
+        pred.link(self);
+        pred
     }
 
-    pub fn get(&self) -> &T {
-        let p = self.0.as_ptr();
+    pub fn insert_as_suss(&self, data: T) -> Self {
+        let suss = Self::new(data);
+
+        // 维护ownership链
+        if let Some(next) = self.0.borrow_mut().next.clone() {
+            suss.0.borrow_mut().next = Some(next);
+        }
+        self.0.borrow_mut().next = Some(suss.0.clone());
+
+        self.link(&suss);
+        suss
+    }
+
+    pub fn get_node(&self) -> Option<&Node<T>> {
+        let ptr = self.0.as_ptr();
         unsafe {
-            p.as_ref().unwrap().data()
+            ptr.as_ref().unwrap().get()
+        }
+    }
+
+    pub fn remove_node(&self) -> Option<Node<T>> {
+        let mut p = self.0.borrow_mut();
+        if let Some(node) = p.data.clone() {
+            p.data = None;
+            Some(node)
+        } else {
+            None
         }
     }
 
@@ -87,4 +114,5 @@ impl<T> ListNode<T> {
         p.0.borrow_mut().pred = Rc::downgrade(&self.0);
         self
     }
+
 }
