@@ -1,16 +1,21 @@
 use lesson_linear::Vector;
 use lesson_linear::vec_vector::VecVector;
+// use lesson_linear::list::node::ListNode;
+use lesson_linear::list::RcList;
+use lesson_linear::list::List;
+use lesson_linear::list::node::flat_node::ListNode;
+
+use std::rc::Rc;
 
 fn main() {
-    let mut v: VecVector<i32> = VecVector::new();
-    let r = &mut v;
-    println!("{}", r);
-    for i in (0..=99) {
-        r.insert_one(i);
-    }
-    println!("{}", r);
-    r.sort_fully().insert_one(5).insert_one(3).remove(4, 9);
-    r.sort_fully();
-    println!("{}", r);
-    println!("{}", r.search_fully(&111).unwrap());
+    // let mut a: RcList<i32> = RcList::new();
+    // let b = a.insert_as_first(11);
+    // let c = a.insert_as_first(12);
+    // println!("{:?}", b.borrow().pred().unwrap());
+    let a = ListNode::new(15);
+    let b = ListNode::new(16);
+    a.link(&b);
+    let c = b.pred();
+
+    println!("{:?}", c)
 }
