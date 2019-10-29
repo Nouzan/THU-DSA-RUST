@@ -10,12 +10,11 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 fn main() {
-    let a = ListNode::new(6);
-    let d = a.insert_as_suss(7).insert_as_suss(8).insert_as_suss(9);
+    let a = ListNode::new(1);
+    a.insert_as_suss(2);
+    a.insert_as_suss(3);
+    a.insert_as_pred(4);
+    a.suss().unwrap().insert_as_pred(5);
 
-    println!("{:?}", d.pred());
-
-    a.insert_as_suss(10);
-
-    println!("{:?}", d.pred());
+    println!("{:?}", a);
 }
