@@ -7,7 +7,7 @@ use crate::node::Node;
 
 #[derive(Debug)]
 struct RawNode<T> {
-    data: Option<Node<T>>,
+    data: Option<T>,
     pred: Option<Rc<RefCell<RawNode<T>>>>,
     suss: Weak<RefCell<RawNode<T>>>,
 }
@@ -15,7 +15,7 @@ struct RawNode<T> {
 impl<T> RawNode<T> {
     fn new(data: T) -> Self {
         RawNode {
-            data: Some(Node::new(data)),
+            data: Some(data),
             pred: None,
             suss: Weak::new(),
         }
@@ -37,12 +37,10 @@ impl<T> RawNode<T> {
         }
     }
 
-    pub fn as_ptr(&self) -> Option<*mut T> {
-        match self.data.clone() {
-            Some(data) => Some(data.as_ptr()),
-            None => None
-        }
+    fn remove_data(&mut self) -> Option<T> {
+        self.data.take()
     }
+
 }
 
 impl<T> Default for RawNode<T> {
@@ -85,35 +83,6 @@ impl<T: std::fmt::Debug> ListNode<T> {
         let suss = Self::new(data);
         self.link_after(&suss);
         suss
-    }
-
-    fn print_node(&self) -> String {
-        match self.get() {
-            None => String::from("None"),
-            Some(data) => format!("{:?}", data)
-        }
-    }
-
-    // pub(super) fn get_node(&self) -> Option<&Node<T>> {
-    //     let ptr = self.0.as_ptr();
-    //     unsafe {
-    //         ptr.as_ref().unwrap().get()
-    //     }
-    // }
-
-    pub(super) fn set_node(&self, node: Node<T>) -> &Self {
-        self.0.borrow_mut().data = Some(node);
-        self
-    }
-
-    pub(super) fn remove_node(&self) -> Option<Node<T>> {
-        let mut p = self.0.borrow_mut();
-        if let Some(node) = p.data.clone() {
-            p.data = None;
-            Some(node)
-        } else {
-            None
-        }
     }
 
     pub fn strong_count(&self) -> usize {
@@ -182,27 +151,26 @@ impl<T: std::fmt::Debug> ListNode<T> {
         self
     }
 
+    pub fn as_ptr(&self) -> *const Self {
+        self
+    }
+
     pub fn get(&self) -> Option<&T> {
         let ptr = self.0.as_ptr();
         unsafe {
-            let pptr = ptr.as_ref().unwrap().as_ptr().unwrap();
-            pptr.as_ref()
+            ptr.as_ref().unwrap().data.as_ref()
         }
     }
 
     pub fn get_mut(&self) -> Option<&mut T> {
         let ptr = self.0.as_ptr();
         unsafe {
-            let pptr = ptr.as_ref().unwrap().as_ptr().unwrap();
-            pptr.as_mut()
+            ptr.as_mut().unwrap().data.as_mut()
         }
     }
 
-    pub(super) fn as_ptr(&self) -> Option<*mut T> {
-        let ptr = self.0.as_ptr();
-        unsafe {
-            ptr.as_ref().unwrap().as_ptr()
-        }
+    pub fn remove_data(&self) -> Option<T> {
+        self.0.borrow_mut().remove_data()
     }
 
 }
@@ -226,7 +194,7 @@ impl<T: fmt::Debug> fmt::Debug for ListNode<T> {
 
         // collect preds
         while let Some(rc) = q {
-            preds.push(format!("{}", rc.print_node()));
+            preds.push(format!("{:?}", rc.get()));
             q = rc.pred();
         }
 
@@ -236,11 +204,11 @@ impl<T: fmt::Debug> fmt::Debug for ListNode<T> {
         }
         
         // print self
-        res = write!(f, "(*){}", self.print_node());
+        res = write!(f, "(*){:?}", self.get());
 
         // print suss
         while let Some(rc) = p {
-            res = write!(f, " -> {}", rc.print_node());
+            res = write!(f, " -> {:?}", rc.get());
             p = rc.suss();
         }
         res
@@ -249,7 +217,7 @@ impl<T: fmt::Debug> fmt::Debug for ListNode<T> {
 
 impl<T: fmt::Display+fmt::Debug> fmt::Display for ListNode<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut res = write!(f, "{}", self.print_node());
+        let mut res = write!(f, "{:?}", self.get());
         res
     }
 }

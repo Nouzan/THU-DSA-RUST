@@ -165,11 +165,8 @@ impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
             let suss = p.suss().unwrap();
             p.clean_after().clean_before();
             pred.combine(&suss);
-            if let Some(node) = p.remove_node() {
-                match node.try_into_inner() {
-                    Ok(data) => Some(data),
-                    Err(_) => None
-                }
+            if let Some(data) = p.remove_data() {
+                Some(data)
             } else {
                 None
             }
@@ -181,7 +178,7 @@ impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
 }
 
 use super::stack::Stack;
-impl<T: fmt::Debug+Eq> Stack<T> for LessonList<T> {
+impl<T: fmt::Debug + Eq> Stack<T> for LessonList<T> {
     fn push(&mut self, e: T) -> &mut Self {
         self.insert_as_first(e);
         self
@@ -193,11 +190,11 @@ impl<T: fmt::Debug+Eq> Stack<T> for LessonList<T> {
             None
         }
     }
-    fn top(&self) -> Option<&T> {
+    fn top(&self) -> Option<&mut T> {
         if let Some(node) = self.first() {
-            let ptr = node.as_ptr().unwrap();
+            let ptr = node.as_ptr();
             unsafe {
-                ptr.as_ref()
+                ptr.as_ref().unwrap().get_mut()
             }
         } else {
             None
