@@ -8,12 +8,8 @@ use lesson_linear::node::Node;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+
 fn main() {
-    // let a = Node::new(1);
-    // println!("{:?}", a.try_into_inner());
-    let mut a = LessonList::new();
-    a.push(1).push(2).push(3);
-    let x = a.top().unwrap();
-    *x = 6;
-    println!("{:?}", a);
+    let mut a = vec![1, 2];
+    println!("{:?}", a.get(0));
 }

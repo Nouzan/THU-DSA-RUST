@@ -19,10 +19,10 @@ pub trait List<T: Eq> {
 
     fn insert_as_first(&mut self, e: T) -> Self::ListNodePosi;
     fn insert_as_last(&mut self, e: T) -> Self::ListNodePosi;
-    fn insert_before(&mut self, q: &Self::ListNodePosi, e: T) -> Self::ListNodePosi;
-    fn insert_after(&mut self, p: &Self::ListNodePosi, e: T) -> Self::ListNodePosi;
+    fn insert_before(&mut self, q: &mut Self::ListNodePosi, e: T) -> Self::ListNodePosi;
+    fn insert_after(&mut self, p: &mut Self::ListNodePosi, e: T) -> Self::ListNodePosi;
     
-    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<T>;
+    fn remove(&mut self, p: &mut Self::ListNodePosi) -> Option<T>;
 
 }
 
@@ -42,9 +42,9 @@ pub struct LessonList<T> {
 
 impl<T: fmt::Debug> Default for LessonList<T> {
     fn default() -> Self {
-        let h = ListNode::default();
-        let t = ListNode::default();
-        h.link_after(&t);
+        let mut h = ListNode::default();
+        let mut t = ListNode::default();
+        h.link_after(&mut t);
         LessonList {
             header: h,
             tailer: t,
@@ -148,24 +148,24 @@ impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
         self.tailer.insert_as_pred(e)
     }
 
-    fn insert_before(&mut self, q: &Self::ListNodePosi, e: T) -> Self::ListNodePosi {
+    fn insert_before(&mut self, q: &mut Self::ListNodePosi, e: T) -> Self::ListNodePosi {
         self.size += 1;
         q.insert_as_pred(e)
     }
 
-    fn insert_after(&mut self, p: &Self::ListNodePosi, e: T) -> Self::ListNodePosi {
+    fn insert_after(&mut self, p: &mut Self::ListNodePosi, e: T) -> Self::ListNodePosi {
         self.size += 1;
         p.insert_as_suss(e)
     }
 
-    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<T> {
+    fn remove(&mut self, p: &mut Self::ListNodePosi) -> Option<T> {
         if self.valid(p) {
             self.size -= 1;
-            let pred = p.pred().unwrap();
-            let suss = p.suss().unwrap();
+            let mut pred = p.pred().unwrap();
+            let mut suss = p.suss().unwrap();
             p.clean_after().clean_before();
-            pred.combine(&suss);
-            if let Some(data) = p.remove_data() {
+            pred.combine(&mut suss);
+            if let Some(data) = p.take() {
                 Some(data)
             } else {
                 None
@@ -184,22 +184,35 @@ impl<T: fmt::Debug + Eq> Stack<T> for LessonList<T> {
         self
     }
     fn pop(&mut self) -> Option<T> {
-        if let Some(p) = self.first() {
-            self.remove(&p)
+        if let Some(mut p) = self.first() {
+            self.remove(&mut p)
         } else {
             None
         }
     }
-    fn top(&self) -> Option<&mut T> {
+    fn top(&self) -> Option<&T> {
         if let Some(node) = self.first() {
-            let ptr = node.as_ptr();
+            let ptr: *const ListNode<T> = &node;
             unsafe {
-                ptr.as_ref().unwrap().get_mut()
+                (*ptr).get()
             }
         } else {
             None
         }
     }
+
+    fn top_mut(&mut self) -> Option<&mut T> {
+        match self.first() {
+            None => None,
+            Some(mut node) => {
+                let ptr: *mut ListNode<T> = &mut node;
+                unsafe {
+                    (*ptr).get_mut()
+                }
+            }
+        }
+    }
+
     fn empty(&self) -> bool {
         self.size == 0
     }
