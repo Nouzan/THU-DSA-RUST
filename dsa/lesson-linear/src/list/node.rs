@@ -37,8 +37,11 @@ impl<T> RawNode<T> {
         }
     }
 
-    fn get(&self) -> Option<&Node<T>> {
-        self.data.as_ref()
+    pub fn as_ptr(&self) -> Option<*mut T> {
+        match self.data.clone() {
+            Some(data) => Some(data.as_ptr()),
+            None => None
+        }
     }
 }
 
@@ -85,25 +88,25 @@ impl<T: std::fmt::Debug> ListNode<T> {
     }
 
     fn print_node(&self) -> String {
-        match self.get_node() {
+        match self.get() {
             None => String::from("None"),
-            Some(node) => format!("{:?}", node)
+            Some(data) => format!("{:?}", data)
         }
     }
 
-    pub fn get_node(&self) -> Option<&Node<T>> {
-        let ptr = self.0.as_ptr();
-        unsafe {
-            ptr.as_ref().unwrap().get()
-        }
-    }
+    // pub(super) fn get_node(&self) -> Option<&Node<T>> {
+    //     let ptr = self.0.as_ptr();
+    //     unsafe {
+    //         ptr.as_ref().unwrap().get()
+    //     }
+    // }
 
-    pub fn set_node(&self, node: Node<T>) -> &Self {
+    pub(super) fn set_node(&self, node: Node<T>) -> &Self {
         self.0.borrow_mut().data = Some(node);
         self
     }
 
-    pub fn remove_node(&self) -> Option<Node<T>> {
+    pub(super) fn remove_node(&self) -> Option<Node<T>> {
         let mut p = self.0.borrow_mut();
         if let Some(node) = p.data.clone() {
             p.data = None;
@@ -177,6 +180,29 @@ impl<T: std::fmt::Debug> ListNode<T> {
         }
         self.0.borrow_mut().pred = None;
         self
+    }
+
+    pub fn get(&self) -> Option<&T> {
+        let ptr = self.0.as_ptr();
+        unsafe {
+            let pptr = ptr.as_ref().unwrap().as_ptr().unwrap();
+            pptr.as_ref()
+        }
+    }
+
+    pub fn get_mut(&self) -> Option<&mut T> {
+        let ptr = self.0.as_ptr();
+        unsafe {
+            let pptr = ptr.as_ref().unwrap().as_ptr().unwrap();
+            pptr.as_mut()
+        }
+    }
+
+    pub(super) fn as_ptr(&self) -> Option<*mut T> {
+        let ptr = self.0.as_ptr();
+        unsafe {
+            ptr.as_ref().unwrap().as_ptr()
+        }
     }
 
 }

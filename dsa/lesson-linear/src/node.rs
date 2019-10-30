@@ -9,6 +9,10 @@ impl<T> Node<T> {
         Node(Rc::new(RefCell::new(data)))
     }
 
+    pub fn as_ptr(&self) -> *mut T {
+        self.0.as_ptr()
+    }
+
     pub fn borrow(&self) -> Ref<T> {
         (*self.0).borrow()
     }

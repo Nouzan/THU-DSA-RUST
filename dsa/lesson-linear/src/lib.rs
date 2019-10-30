@@ -35,6 +35,7 @@ pub trait Vector<T>: fmt::Display
 pub mod vec_vector;
 pub mod list;
 pub mod node;
+pub mod stack;
 
 #[cfg(test)]
 mod tests {

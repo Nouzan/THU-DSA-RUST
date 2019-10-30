@@ -2,7 +2,6 @@ pub mod node;
 
 pub trait List<T: Eq> {
     type ListNodePosi;
-    type Node;
 
     fn size(&self) -> usize;
     fn empty(&self) -> bool {
@@ -23,7 +22,7 @@ pub trait List<T: Eq> {
     fn insert_before(&mut self, q: &Self::ListNodePosi, e: T) -> Self::ListNodePosi;
     fn insert_after(&mut self, p: &Self::ListNodePosi, e: T) -> Self::ListNodePosi;
     
-    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<Self::Node>;
+    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<T>;
 
 }
 
@@ -61,8 +60,7 @@ impl<T: fmt::Debug> LessonList<T> {
 }
 
 impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
-    type ListNodePosi = ListNode<T>;
-    type Node = Node<T>;    
+    type ListNodePosi = ListNode<T>;  
 
     fn size(&self) -> usize {
         self.size
@@ -80,8 +78,8 @@ impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
                     println!("Not found");
                     return None;
                 }
-                if let Some(node) = p.get_node() {
-                    if *node.borrow() == *e {
+                if let Some(data) = p.get() {
+                    if *data == *e {
                         return Some(p);
                     }
                 }
@@ -160,16 +158,52 @@ impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
         p.insert_as_suss(e)
     }
 
-    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<Self::Node> {
+    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<T> {
         if self.valid(p) {
             self.size -= 1;
             let pred = p.pred().unwrap();
             let suss = p.suss().unwrap();
             p.clean_after().clean_before();
             pred.combine(&suss);
-            p.remove_node()
+            if let Some(node) = p.remove_node() {
+                match node.try_into_inner() {
+                    Ok(data) => Some(data),
+                    Err(_) => None
+                }
+            } else {
+                None
+            }
         } else {
             None
         }
+    }
+
+}
+
+use super::stack::Stack;
+impl<T: fmt::Debug+Eq> Stack<T> for LessonList<T> {
+    fn push(&mut self, e: T) -> &mut Self {
+        self.insert_as_first(e);
+        self
+    }
+    fn pop(&mut self) -> Option<T> {
+        if let Some(p) = self.first() {
+            self.remove(&p)
+        } else {
+            None
+        }
+    }
+    fn top(&self) -> Option<&T> {
+        if let Some(node) = self.first() {
+            let ptr = node.as_ptr().unwrap();
+            unsafe {
+                ptr.as_ref()
+            }
+        } else {
+            None
+        }
+    }
+    fn empty(&self) -> bool {
+        self.size == 0
     }
 }
