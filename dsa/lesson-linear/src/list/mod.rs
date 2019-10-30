@@ -2,6 +2,7 @@ pub mod node;
 
 pub trait List<T: Eq> {
     type ListNodePosi;
+    type Node;
 
     fn size(&self) -> usize;
     fn empty(&self) -> bool {
@@ -11,36 +12,41 @@ pub trait List<T: Eq> {
     fn find(&self, e: &T) -> Option<Self::ListNodePosi>;
     fn relative_find(&self, e: &T, n: usize, p: &Self::ListNodePosi) -> Option<Self::ListNodePosi>;
 
-    // fn first(&self) -> Option<Self::ListNodePosi>;
-    // fn last(&self) -> Option<Self::ListNodePosi>;
-    // fn valid(p: &Self::ListNodePosi) -> bool;
+    fn first(&self) -> Option<Self::ListNodePosi>;
+    fn last(&self) -> Option<Self::ListNodePosi>;
+    fn valid(&self, p: &Self::ListNodePosi) -> bool;
+    fn pred(&self, p: &Self::ListNodePosi) -> Option<Self::ListNodePosi>;
+    fn suss(&self, p: &Self::ListNodePosi) -> Option<Self::ListNodePosi>;
 
     fn insert_as_first(&mut self, e: T) -> Self::ListNodePosi;
     fn insert_as_last(&mut self, e: T) -> Self::ListNodePosi;
     fn insert_before(&mut self, q: &Self::ListNodePosi, e: T) -> Self::ListNodePosi;
     fn insert_after(&mut self, p: &Self::ListNodePosi, e: T) -> Self::ListNodePosi;
     
-    // fn remove(p: &Self::ListNodePosi) -> T;
+    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<Self::Node>;
 
 }
 
-use crate::list::node::ListNodePosi;
-use crate::list::node::ListNode;
 use std::fmt;
 use std::rc::Rc;
 
+use node::ListNode;
+use super::node::Node;
+use std::default::Default;
+
 #[derive(Debug)]
-pub struct RcList<T> {
-    header: ListNodePosi<T>,
-    tailer: ListNodePosi<T>,
+pub struct LessonList<T> {
+    header: ListNode<T>,
+    tailer: ListNode<T>,
     size: usize
 }
 
-impl<T: Default + fmt::Debug> RcList<T> {
-    pub fn new() -> Self {
-        let h = ListNode::new_as_posi(T::default());
-        let t = h.borrow_mut().insert_as_suss(T::default());
-        RcList {
+impl<T: fmt::Debug> Default for LessonList<T> {
+    fn default() -> Self {
+        let h = ListNode::default();
+        let t = ListNode::default();
+        h.link_after(&t);
+        LessonList {
             header: h,
             tailer: t,
             size: 0
@@ -48,8 +54,15 @@ impl<T: Default + fmt::Debug> RcList<T> {
     }
 }
 
-impl<T: Eq + fmt::Debug> List<T> for RcList<T> {
-    type ListNodePosi = ListNodePosi<T>;
+impl<T: fmt::Debug> LessonList<T> {
+    pub fn new() -> Self {
+        LessonList::default()
+    }
+}
+
+impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
+    type ListNodePosi = ListNode<T>;
+    type Node = Node<T>;    
 
     fn size(&self) -> usize {
         self.size
@@ -59,16 +72,21 @@ impl<T: Eq + fmt::Debug> List<T> for RcList<T> {
         self.relative_find(e, self.size, &self.tailer)
     }
 
-    fn relative_find(&self, e: &T, mut n: usize, mut p: &Self::ListNodePosi) -> Option<Self::ListNodePosi> {
-        while n > 0 {
-            n = n - 1;
-            if let Some(p) = p.borrow().pred() {
-                if Rc::ptr_eq(&p, &self.header) {
+    fn relative_find(&self, e: &T, n: usize, posi: &Self::ListNodePosi) -> Option<Self::ListNodePosi> {
+        let mut mp = posi.pred();
+        for i in 0..n {
+            if let Some(p) = mp {
+                if p == self.header {
+                    println!("Not found");
                     return None;
                 }
-                if **p.borrow() == *e {
-                    return Some(p);
+                if let Some(node) = p.get_node() {
+                    if *node.borrow() == *e {
+                        return Some(p);
+                    }
                 }
+                mp = p.pred();
+
             } else {
                 return None
             }
@@ -76,35 +94,82 @@ impl<T: Eq + fmt::Debug> List<T> for RcList<T> {
         None
     }
 
+    fn first(&self) -> Option<Self::ListNodePosi> {
+        if let Some(q) = self.header.suss() {
+            if q != self.tailer {
+                Some(q)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn last(&self) -> Option<Self::ListNodePosi> {
+        if let Some(p) = self.tailer.pred() {
+            if p != self.header {
+                Some(p)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn valid(&self, p: &Self::ListNodePosi) -> bool {
+        *p != self.header && *p != self.tailer
+    }
+
+    fn pred(&self, p: &Self::ListNodePosi) -> Option<Self::ListNodePosi> {
+        if let Some(p) = p.pred() {
+            if self.valid(&p) {
+                return Some(p);
+            }
+        }
+        None
+    }
+
+    fn suss(&self, p: &Self::ListNodePosi) -> Option<Self::ListNodePosi> {
+        if let Some(p) = p.suss() {
+            if self.valid(&p) {
+                return Some(p);
+            }
+        }
+        None
+    }
+
     fn insert_as_first(&mut self, e: T) -> Self::ListNodePosi {
-        let qq = self.header.borrow().suss().unwrap();
-        let q = self.header.borrow_mut().insert_as_suss(e);
-        q.borrow_mut().combine(&qq);
         self.size += 1;
-        q
+        self.header.insert_as_suss(e)
     }
 
     fn insert_as_last(&mut self, e: T) -> Self::ListNodePosi {
-        let pp = self.tailer.borrow().pred().unwrap();
-        let p = self.tailer.borrow_mut().insert_as_pred(e);
-        pp.borrow_mut().combine(&p);
         self.size += 1;
-        p
+        self.tailer.insert_as_pred(e)
     }
 
     fn insert_before(&mut self, q: &Self::ListNodePosi, e: T) -> Self::ListNodePosi {
-        let pp = q.borrow().pred().unwrap();
-        let p = q.borrow_mut().insert_as_pred(e);
-        pp.borrow_mut().combine(&p);
         self.size += 1;
-        p
+        q.insert_as_pred(e)
     }
 
     fn insert_after(&mut self, p: &Self::ListNodePosi, e: T) -> Self::ListNodePosi {
-        let qq = p.borrow().suss().unwrap();
-        let q = p.borrow_mut().insert_as_suss(e);
-        q.borrow_mut().combine(&qq);
         self.size += 1;
-        q
+        p.insert_as_suss(e)
+    }
+
+    fn remove(&mut self, p: &Self::ListNodePosi) -> Option<Self::Node> {
+        if self.valid(p) {
+            self.size -= 1;
+            let pred = p.pred().unwrap();
+            let suss = p.suss().unwrap();
+            p.clean_after().clean_before();
+            pred.combine(&suss);
+            p.remove_node()
+        } else {
+            None
+        }
     }
 }
