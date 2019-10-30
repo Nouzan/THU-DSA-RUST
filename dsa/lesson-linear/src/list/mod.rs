@@ -33,14 +33,14 @@ use node::ListNode;
 use super::node::Node;
 use std::default::Default;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct LessonList<T> {
     header: ListNode<T>,
     tailer: ListNode<T>,
     size: usize
 }
 
-impl<T: fmt::Debug> Default for LessonList<T> {
+impl<T> Default for LessonList<T> {
     fn default() -> Self {
         let mut h = ListNode::default();
         let mut t = ListNode::default();
@@ -53,13 +53,13 @@ impl<T: fmt::Debug> Default for LessonList<T> {
     }
 }
 
-impl<T: fmt::Debug> LessonList<T> {
+impl<T> LessonList<T> {
     pub fn new() -> Self {
         LessonList::default()
     }
 }
 
-impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
+impl<T: Eq> List<T> for LessonList<T> {
     type ListNodePosi = ListNode<T>;  
 
     fn size(&self) -> usize {
@@ -178,7 +178,7 @@ impl<T: Eq + fmt::Debug> List<T> for LessonList<T> {
 }
 
 use super::stack::Stack;
-impl<T: fmt::Debug + Eq> Stack<T> for LessonList<T> {
+impl<T: Eq> Stack<T> for LessonList<T> {
     fn push(&mut self, e: T) -> &mut Self {
         self.insert_as_first(e);
         self

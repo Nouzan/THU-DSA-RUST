@@ -58,12 +58,54 @@ impl<T> Default for RawNode<T> {
     }
 }
 
-
 pub struct ListNode<T> (Rc<RefCell<RawNode<T>>>);
+
+impl<T> Node<T> for ListNode<T> {
+    fn new(data: T) -> Self {
+        Self::from(RawNode::new(data))
+    }
+
+    fn get(&self) -> Option<&T> {
+        let ptr = self.0.as_ptr();
+        unsafe {
+            (*ptr).data.as_ref()
+        }
+    }
+
+    fn get_mut(&mut self) -> Option<&mut T> {
+        let ptr = self.0.as_ptr();
+        unsafe {
+            (*ptr).data.as_mut()
+        }
+    }
+
+    fn set(&mut self, data: T) -> &mut Self {
+        self.0.borrow_mut().set(data);
+        self
+    }
+
+    fn take(&mut self) -> Option<T> {
+        self.0.borrow_mut().take()
+    }
+}
 
 impl<T> Default for ListNode<T> {
     fn default() -> Self {
         ListNode::from(RawNode::default())
+    }
+}
+
+impl<T> Eq for ListNode<T> {}
+
+impl<T> PartialEq for ListNode<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl<T> Clone for ListNode<T> {
+    fn clone(&self) -> Self {
+        ListNode(Rc::clone(&self.0))
     }
 }
 
@@ -73,36 +115,32 @@ impl<T> From<RawNode<T>> for ListNode<T> {
     }
 }
 
-impl<T: std::fmt::Debug> ListNode<T> {
-    pub(super) fn new(data: T) -> Self {
-        Self::from(RawNode::new(data))
-    }
-
-    pub(super) fn insert_as_pred(&mut self, data: T) -> Self {
+impl<T> ListNode<T> {
+    pub fn insert_as_pred(&mut self, data: T) -> Self {
         let mut pred = Self::new(data);
         self.link_before(&mut pred);
         pred
     }
 
-    pub(super) fn insert_as_suss(&mut self, data: T) -> Self {
+    pub fn insert_as_suss(&mut self, data: T) -> Self {
         let mut suss = Self::new(data);
         self.link_after(&mut suss);
         suss
     }
 
-    pub fn strong_count(&self) -> usize {
+    fn strong_count(&self) -> usize {
         Rc::strong_count(&self.0)
     }
 
-    pub(super) fn me(&self) -> Option<ListNode<T>> {
+    fn me(&self) -> Option<ListNode<T>> {
         Some(ListNode(self.0.clone()))
     }
 
-    pub(super) fn pred(&self) -> Option<ListNode<T>> {
+    pub fn pred(&self) -> Option<ListNode<T>> {
         self.0.borrow().pred()
     }
 
-    pub(super) fn suss(&self) -> Option<ListNode<T>> {
+    pub fn suss(&self) -> Option<ListNode<T>> {
         self.0.borrow().suss()
     }
 
@@ -110,13 +148,13 @@ impl<T: std::fmt::Debug> ListNode<T> {
         Rc::ptr_eq(&self.0, &p.0) || p.pred().is_some() || p.suss().is_some()
     }
 
-    pub(super) fn combine(&mut self, p: &mut Self) -> &mut Self {
+    pub fn combine(&mut self, p: &mut Self) -> &mut Self {
         self.0.borrow_mut().suss = Rc::downgrade(&p.0);
         p.0.borrow_mut().pred = Some(Rc::clone(&self.0));
         self
     }
 
-    pub(super) fn link_after(&mut self, p: &mut Self) -> &mut Self {
+    pub fn link_after(&mut self, p: &mut Self) -> &mut Self {
         if !self.check_alone(p) {
             p.0.borrow_mut().suss = self.0.borrow_mut().suss.clone();
             if let Some(q) = self.suss() {
@@ -128,7 +166,7 @@ impl<T: std::fmt::Debug> ListNode<T> {
         self
     }
 
-    pub(super) fn link_before(&mut self, p: &mut Self) -> &mut Self {
+    pub fn link_before(&mut self, p: &mut Self) -> &mut Self {
         if !self.check_alone(p) {
             p.0.borrow_mut().pred = self.0.borrow_mut().pred.clone();
             if let Some(q) = self.pred() {
@@ -140,7 +178,7 @@ impl<T: std::fmt::Debug> ListNode<T> {
         self
     }
 
-    pub(super) fn clean_after(&mut self) -> &mut Self {
+    pub fn clean_after(&mut self) -> &mut Self {
         if let Some(q) = self.suss() {
             q.0.borrow_mut().pred = None;
         }
@@ -148,7 +186,7 @@ impl<T: std::fmt::Debug> ListNode<T> {
         self
     }
 
-    pub(super) fn clean_before(&mut self) -> &mut Self {
+    pub fn clean_before(&mut self) -> &mut Self {
         if let Some(p) = self.pred() {
             p.0.borrow_mut().suss = Weak::new();
         }
@@ -156,37 +194,6 @@ impl<T: std::fmt::Debug> ListNode<T> {
         self
     }
 
-    pub fn get(&self) -> Option<&T> {
-        let ptr = self.0.as_ptr();
-        unsafe {
-            (*ptr).data.as_ref()
-        }
-    }
-
-    pub fn get_mut(&mut self) -> Option<&mut T> {
-        let ptr = self.0.as_ptr();
-        unsafe {
-            (*ptr).data.as_mut()
-        }
-    }
-
-    pub fn set(&mut self, data: T) -> &mut Self {
-        self.0.borrow_mut().set(data);
-        self
-    }
-
-    pub fn take(&mut self) -> Option<T> {
-        self.0.borrow_mut().take()
-    }
-
-}
-
-impl<T> Eq for ListNode<T> {}
-
-impl<T> PartialEq for ListNode<T> {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
-    }
 }
 
 use std::fmt;
